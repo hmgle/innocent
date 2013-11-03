@@ -16,3 +16,9 @@
 *.exe
 *.out
 *.app
+
+*.order
+*.symvers
+*.cmd
+.tmp_versions
+*.mod.c
