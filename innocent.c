@@ -1,5 +1,39 @@
 #include <linux/init.h>
+#include <linux/types.h>
+#include <linux/list.h>
+#include <linux/jhash.h>
 #include <linux/module.h>
+
+#define IDIMO_HASH_BITS 12
+#define IDIMO_TABLE_SIZE (1 << IDIMO_HASH_BITS)
+
+static struct hlist_head idimo_table[IDIMO_TABLE_SIZE];
+
+struct idimo_index {
+	struct hlist_node hlist;
+	char idimo_index_name[3];
+	struct list_head list;
+};
+
+struct idimo_entry {
+	char idimo[9];
+	struct list_head list;
+};
+
+static struct idimo_index *get_idimo_index(const char *name) 
+{
+	struct hlist_head *head;
+	struct hlist_node *node;
+	struct idimo_index *e;
+	u32 hash = jhash(name, strlen(name), 0);
+
+	head = &idimo_table[hash & (IDIMO_TABLE_SIZE - 1)];
+	hlist_for_each_entry(e, node, head, hlist) {
+		if (!strcmp(name, e->idimo_index_name))
+			return e;
+	}
+	return NULL;
+}
 
 static void init_idimo_data(void)
 {
