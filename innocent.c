@@ -52,6 +52,7 @@ static struct idimo_index *add_idimo_index(const char *name)
 	if (!e)
 		return ERR_PTR(-ENOMEM);
 	memcpy(&e->idimo_index_name[0], name, 3);
+	INIT_LIST_HEAD(&e->list);
 	hlist_add_head(&e->hlist, head);
 	return e;
 }
