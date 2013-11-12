@@ -26,11 +26,11 @@ static struct idimo_index *get_idimo_index(const char *name)
 	struct hlist_head *head;
 	struct hlist_node *node;
 	struct idimo_index *e;
-	u32 hash = jhash(name, strlen(name), 0);
+	u32 hash = jhash(name, 3, 0);
 
 	head = &idimo_table[hash & (IDIMO_TABLE_SIZE - 1)];
 	hlist_for_each_entry(e, node, head, hlist) {
-		if (!strcmp(name, e->idimo_index_name))
+		if (!strncmp(name, e->idimo_index_name, 3))
 			return e;
 	}
 	return NULL;
@@ -41,11 +41,11 @@ static struct idimo_index *add_idimo_index(const char *name)
 	struct hlist_head *head;
 	struct hlist_node *node;
 	struct idimo_index *e;
-	u32 hash = jhash(name, strlen(name), 0);
+	u32 hash = jhash(name, 3, 0);
 
 	head = &idimo_table[hash & (IDIMO_TABLE_SIZE - 1)];
 	hlist_for_each_entry(e, node, head, hlist) {
-		if (!strcmp(name, e->idimo_index_name))
+		if (!strncmp(name, e->idimo_index_name, 3))
 			return ERR_PTR(-EEXIST); /* Already there */
 	}
 	e = kmalloc(sizeof(struct idimo_index), GFP_KERNEL);
@@ -55,6 +55,31 @@ static struct idimo_index *add_idimo_index(const char *name)
 	INIT_LIST_HEAD(&e->list);
 	hlist_add_head(&e->hlist, head);
 	return e;
+}
+
+static void idimo_index_add_entry(struct idimo_index *index,
+				struct idimo_entry *entry)
+{
+	list_add(&entry->list, &index->list);
+}
+
+static int idimo_add_entry(const char name[12])
+{
+	struct idimo_index *index;
+	struct idimo_entry *entry;
+
+	index = get_idimo_index(name);
+	if (!index) {
+		index = add_idimo_index(name);
+		if (IS_ERR(index))
+			return -1;
+	}
+	/* TODO: check  duplicate */
+	entry = kmalloc(sizeof(*entry), GFP_KERNEL);
+	if (!entry)
+		return -1;
+	idimo_index_add_entry(index, entry);
+	return 0;
 }
 
 static void init_idimo_data(void)
