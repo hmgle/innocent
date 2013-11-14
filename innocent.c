@@ -13,6 +13,8 @@
 
 static struct hlist_head idimo_table[IDIMO_TABLE_SIZE];
 
+static char prefix[3];
+
 struct idimo_index {
 	struct hlist_node hlist;
 	char idimo_index_name[3];
@@ -149,13 +151,41 @@ static long innocent_ioctl(struct file *filp, unsigned int cmd,
 static ssize_t innocent_write(struct file *filp, const char __user *buf,
 			size_t count, loff_t *f_pos)
 {
-	return 0;
+	char tmp[1020];
+
+	printk("count is %d\n", count);
+	if (count < 1020)
+		copy_from_user(tmp, buf, count);
+	else
+		copy_from_user(tmp, buf, 1020);
+	memcpy(prefix, tmp, 3);
+	return count;
 }
 
 static ssize_t innocent_read(struct file *filp, char __user *buf, 
 			size_t count, loff_t *f_pos)
 {
-	return 0;
+	int offset = 0;
+	struct idimo_index *index;
+	struct idimo_entry *entry;
+	char idimo[16] = {0,};
+
+	if (*f_pos != 0)
+		return 0;
+	if (prefix[0] == '\0')
+		return 0;
+	index = get_idimo_index(prefix);
+	if (!index)
+		return 0;
+	memcpy(idimo, prefix, 3);
+	list_for_each_entry(entry, &index->list, list) {
+		memcpy(idimo + 3, entry->idimo, 9);
+		idimo[12] = '\n';
+		copy_to_user(buf + offset, idimo, 13);
+		offset += 13;
+	}
+	*f_pos = offset;
+	return offset;
 }
 
 
