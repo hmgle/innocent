@@ -65,6 +65,36 @@ static void idimo_index_add_entry(struct idimo_index *index,
 	list_add(&entry->list, &index->list);
 }
 
+static void idimo_index_del_all_entry(struct idimo_index *index)
+{
+	struct idimo_entry *tmp;
+	struct list_head *pos, *q;
+
+	list_for_each_safe(pos, q, &index->list) {
+		tmp = list_entry(pos, struct idimo_entry, list);
+		list_del(pos);
+		kfree(tmp);
+	}
+}
+
+static void idimo_del_all_index(void)
+{
+	struct hlist_head *head;
+	struct hlist_node *node, *tmp;
+	struct idimo_index *index;
+	int i;
+
+	for (i = 0; i < IDIMO_TABLE_SIZE; i++) {
+		head = &idimo_table[i];
+		hlist_for_each_safe(node, tmp, head) {
+			index = hlist_entry(node, struct idimo_index, hlist);
+			idimo_index_del_all_entry(index);
+			hlist_del(node);
+			kfree(index);
+		}
+	}
+}
+
 static int idimo_add_entry(const char name[12])
 {
 	struct idimo_index *index;
@@ -111,6 +141,7 @@ static void init_idimo_data(struct file *fp)
 
 static void release_idimo_data(void)
 {
+	idimo_del_all_index();
 }
 
 static int __init
