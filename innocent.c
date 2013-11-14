@@ -26,7 +26,7 @@ struct idimo_entry {
 	struct list_head list;
 };
 
-static struct idimo_index *get_idimo_index(const char *name) 
+static struct idimo_index *get_idimo_index(const char *name)
 {
 	struct hlist_head *head;
 	struct hlist_node *node;
@@ -162,7 +162,7 @@ static ssize_t innocent_write(struct file *filp, const char __user *buf,
 	return count;
 }
 
-static ssize_t innocent_read(struct file *filp, char __user *buf, 
+static ssize_t innocent_read(struct file *filp, char __user *buf,
 			size_t count, loff_t *f_pos)
 {
 	int offset = 0;
@@ -187,7 +187,6 @@ static ssize_t innocent_read(struct file *filp, char __user *buf,
 	*f_pos = offset;
 	return offset;
 }
-
 
 static const struct file_operations innocent_fops = {
 	.owner		= THIS_MODULE,
@@ -230,7 +229,7 @@ innocent_init(void)
 	ret = misc_register(&innocent_dev);
 	if (ret)
 		printk(KERN_ERR
-		       "Unable to register \"innocent\" misc device\n");
+			"Unable to register \"innocent\" misc device\n");
 	return ret;
 }
 
