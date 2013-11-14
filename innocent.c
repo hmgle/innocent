@@ -3,6 +3,8 @@
 #include <linux/list.h>
 #include <linux/jhash.h>
 #include <linux/slab.h>
+#include <linux/fs.h>
+#include <linux/uaccess.h>
 #include <linux/module.h>
 
 #define IDIMO_HASH_BITS 12
@@ -82,8 +84,28 @@ static int idimo_add_entry(const char name[12])
 	return 0;
 }
 
-static void init_idimo_data(void)
+static void init_idimo_data(struct file *fp)
 {
+	loff_t pos;
+	loff_t file_offset = 0;
+	ssize_t vfs_read_retval;
+	char buf[16] = {0,};
+	int ret;
+
+	for (;;) {
+		pos = file_offset;
+		vfs_read_retval = vfs_read(fp, buf, 14, &pos);
+		if (vfs_read_retval < 14) {
+			printk("end\n");
+			break;
+		}
+		file_offset += vfs_read_retval;
+		ret = idimo_add_entry(buf);
+		if (ret < 0) {
+			printk("idimo_add_entry() failed!\n");
+			return;
+		}
+	}
 }
 
 static void release_idimo_data(void)
@@ -93,9 +115,23 @@ static void release_idimo_data(void)
 static int __init
 innocent_init(void)
 {
+	struct file *fp;
+	mm_segment_t fs;
+	int ret;
+
 	printk("innocent init\n");
-	init_idimo_data();
-	return 0;
+
+	fp = filp_open("idimo.txt", O_RDONLY, 0644);
+	if (IS_ERR(fp)) {
+		printk("open file error\n");
+		return -1;
+	}
+	fs = get_fs();
+	set_fs(KERNEL_DS);
+	init_idimo_data(fp);
+	filp_close(fp, NULL);
+	set_fs(fs);
+	return ret;
 }
 
 static void __exit
