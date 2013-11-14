@@ -5,6 +5,7 @@
 #include <linux/slab.h>
 #include <linux/fs.h>
 #include <linux/uaccess.h>
+#include <linux/miscdevice.h>
 #include <linux/module.h>
 
 #define IDIMO_HASH_BITS 12
@@ -139,6 +140,38 @@ static void init_idimo_data(struct file *fp)
 	}
 }
 
+static long innocent_ioctl(struct file *filp, unsigned int cmd,
+			  unsigned long arg)
+{
+	return 0;
+}
+
+static ssize_t innocent_write(struct file *filp, const char __user *buf,
+			size_t count, loff_t *f_pos)
+{
+	return 0;
+}
+
+static ssize_t innocent_read(struct file *filp, char __user *buf, 
+			size_t count, loff_t *f_pos)
+{
+	return 0;
+}
+
+
+static const struct file_operations innocent_fops = {
+	.owner		= THIS_MODULE,
+	.read		= innocent_read,
+	.write		= innocent_write,
+	.unlocked_ioctl	= innocent_ioctl,
+};
+
+static struct miscdevice innocent_dev = {
+	MISC_DYNAMIC_MINOR,
+	"innocent",
+	&innocent_fops
+};
+
 static void release_idimo_data(void)
 {
 	idimo_del_all_index();
@@ -163,12 +196,18 @@ innocent_init(void)
 	init_idimo_data(fp);
 	filp_close(fp, NULL);
 	set_fs(fs);
+
+	ret = misc_register(&innocent_dev);
+	if (ret)
+		printk(KERN_ERR
+		       "Unable to register \"innocent\" misc device\n");
 	return ret;
 }
 
 static void __exit
 innocent_exit(void)
 {
+	misc_deregister(&innocent_dev);
 	release_idimo_data();
 	printk("innocent exit\n");
 }
