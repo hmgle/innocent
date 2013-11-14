@@ -80,6 +80,7 @@ static int idimo_add_entry(const char name[12])
 	entry = kmalloc(sizeof(*entry), GFP_KERNEL);
 	if (!entry)
 		return -1;
+	memcpy(entry->idimo, name + 3, 9);
 	idimo_index_add_entry(index, entry);
 	return 0;
 }
