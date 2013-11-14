@@ -92,8 +92,8 @@ static void idimo_del_all_index(void)
 		hlist_for_each_safe(node, tmp, head) {
 			index = hlist_entry(node, struct idimo_index, hlist);
 			idimo_index_del_all_entry(index);
-			kfree(index);
 			hlist_del(node);
+			kfree(index);
 		}
 	}
 }
