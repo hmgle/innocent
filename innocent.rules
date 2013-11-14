@@ -1,0 +1,1 @@
+KERNEL=="innocent", NAME="innocent", SYMLINK+="innocent", MODE="0666"
