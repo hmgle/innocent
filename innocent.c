@@ -8,6 +8,8 @@
 #include <linux/miscdevice.h>
 #include <linux/module.h>
 
+#include "config.h"
+
 #define IDIMO_HASH_BITS 12
 #define IDIMO_TABLE_SIZE (1 << IDIMO_HASH_BITS)
 
@@ -29,30 +31,42 @@ struct idimo_entry {
 static struct idimo_index *get_idimo_index(const char *name)
 {
 	struct hlist_head *head;
+#if NEWKERN
+#else
 	struct hlist_node *node;
+#endif
 	struct idimo_index *e;
 	u32 hash = jhash(name, 3, 0);
 
 	head = &idimo_table[hash & (IDIMO_TABLE_SIZE - 1)];
-	hlist_for_each_entry(e, node, head, hlist) {
+#if NEWKERN
+	hlist_for_each_entry(e, head, hlist)
+#else
+	hlist_for_each_entry(e, node, head, hlist)
+#endif
 		if (!strncmp(name, e->idimo_index_name, 3))
 			return e;
-	}
 	return NULL;
 }
 
 static struct idimo_index *add_idimo_index(const char *name)
 {
 	struct hlist_head *head;
+#if NEWKERN
+#else
 	struct hlist_node *node;
+#endif
 	struct idimo_index *e;
 	u32 hash = jhash(name, 3, 0);
 
 	head = &idimo_table[hash & (IDIMO_TABLE_SIZE - 1)];
-	hlist_for_each_entry(e, node, head, hlist) {
+#if NEWKERN
+	hlist_for_each_entry(e, head, hlist)
+#else
+	hlist_for_each_entry(e, node, head, hlist)
+#endif
 		if (!strncmp(name, e->idimo_index_name, 3))
 			return ERR_PTR(-EEXIST); /* Already there */
-	}
 	e = kmalloc(sizeof(struct idimo_index), GFP_KERNEL);
 	if (!e)
 		return ERR_PTR(-ENOMEM);
