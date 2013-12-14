@@ -88,7 +88,7 @@ static struct idiom_index *add_idiom_index(const char *word, int loc)
 }
 
 static void idiom_index_add_entry(struct idiom_index *index,
-				struct idiom_entry *entry, int loc)
+				  struct idiom_entry *entry, int loc)
 {
 	list_add(&entry->lists[loc], &index->list);
 	entry->refer_cnt++;
@@ -120,7 +120,9 @@ static void idiom_del_all_index(void)
 		for (i = 0; i < IDIOM_TABLE_SIZE; i++) {
 			head = &idiom_table[j][i];
 			hlist_for_each_safe(node, tmp, head) {
-				index = hlist_entry(node, struct idiom_index, hlist);
+				index =
+				    hlist_entry(node, struct idiom_index,
+						hlist);
 				idiom_index_del_all_entry(index, j);
 				hlist_del(node);
 				kfree(index);
@@ -157,7 +159,7 @@ static void init_idiom_data(struct file *fp)
 	loff_t pos;
 	loff_t file_offset = 0;
 	ssize_t vfs_read_retval;
-	char buf[16] = {0,};
+	char buf[16] = { 0, };
 	int ret;
 
 	for (;;) {
@@ -177,13 +179,13 @@ static void init_idiom_data(struct file *fp)
 }
 
 static long innocent_ioctl(struct file *filp, unsigned int cmd,
-			  unsigned long arg)
+			   unsigned long arg)
 {
 	return 0;
 }
 
 static ssize_t innocent_write(struct file *filp, const char __user *buf,
-			size_t count, loff_t *f_pos)
+			      size_t count, loff_t *f_pos)
 {
 	char tmp[1020];
 
@@ -197,12 +199,12 @@ static ssize_t innocent_write(struct file *filp, const char __user *buf,
 }
 
 static ssize_t innocent_read(struct file *filp, char __user *buf,
-			size_t count, loff_t *f_pos)
+			     size_t count, loff_t *f_pos)
 {
 	int offset = 0;
 	struct idiom_index *index;
 	struct idiom_entry *entry;
-	char idiom[IDIOM_LEN + 1] = {0,};
+	char idiom[IDIOM_LEN + 1] = { 0, };
 
 	if (*f_pos != 0)
 		return 0;
@@ -222,10 +224,10 @@ static ssize_t innocent_read(struct file *filp, char __user *buf,
 }
 
 static const struct file_operations innocent_fops = {
-	.owner		= THIS_MODULE,
-	.read		= innocent_read,
-	.write		= innocent_write,
-	.unlocked_ioctl	= innocent_ioctl,
+	.owner = THIS_MODULE,
+	.read = innocent_read,
+	.write = innocent_write,
+	.unlocked_ioctl = innocent_ioctl,
 };
 
 static struct miscdevice innocent_dev = {
@@ -239,8 +241,7 @@ static void release_idiom_data(void)
 	idiom_del_all_index();
 }
 
-static int __init
-innocent_init(void)
+static int __init innocent_init(void)
 {
 	struct file *fp;
 	mm_segment_t fs;
@@ -262,12 +263,11 @@ innocent_init(void)
 	ret = misc_register(&innocent_dev);
 	if (ret)
 		printk(KERN_ERR
-			"Unable to register \"innocent\" misc device\n");
+		       "Unable to register \"innocent\" misc device\n");
 	return ret;
 }
 
-static void __exit
-innocent_exit(void)
+static void __exit innocent_exit(void)
 {
 	misc_deregister(&innocent_dev);
 	release_idiom_data();
