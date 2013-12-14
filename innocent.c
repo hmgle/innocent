@@ -29,7 +29,7 @@ struct idiom_index {
 
 struct idiom_entry {
 	char idiom[IDIOM_LEN];
-	struct list_head lists[WORD_LEN];
+	struct list_head lists[IDIOM_WORD_COUNT];
 	int refer_cnt;
 };
 
