@@ -10,6 +10,7 @@
 
 #include "config.h"
 
+#define IDIOM_LEN 12
 #define IDIOM_HASH_BITS 12
 #define IDIOM_TABLE_SIZE (1 << IDIOM_HASH_BITS)
 
@@ -24,7 +25,7 @@ struct idiom_index {
 };
 
 struct idiom_entry {
-	char idiom[9];
+	char idiom[IDIOM_LEN];
 	struct list_head list;
 };
 
@@ -127,7 +128,7 @@ static int idiom_add_entry(const char name[12])
 	entry = kmalloc(sizeof(*entry), GFP_KERNEL);
 	if (!entry)
 		return -1;
-	memcpy(entry->idiom, name + 3, 9);
+	memcpy(entry->idiom, name, IDIOM_LEN);
 	idiom_index_add_entry(index, entry);
 	return 0;
 }
@@ -182,7 +183,7 @@ static ssize_t innocent_read(struct file *filp, char __user *buf,
 	int offset = 0;
 	struct idiom_index *index;
 	struct idiom_entry *entry;
-	char idiom[16] = {0,};
+	char idiom[IDIOM_LEN + 1] = {0,};
 
 	if (*f_pos != 0)
 		return 0;
@@ -191,12 +192,11 @@ static ssize_t innocent_read(struct file *filp, char __user *buf,
 	index = get_idiom_index(prefix);
 	if (!index)
 		return 0;
-	memcpy(idiom, prefix, 3);
 	list_for_each_entry(entry, &index->list, list) {
-		memcpy(idiom + 3, entry->idiom, 9);
-		idiom[12] = '\n';
-		copy_to_user(buf + offset, idiom, 13);
-		offset += 13;
+		memcpy(idiom, entry->idiom, IDIOM_LEN);
+		idiom[IDIOM_LEN] = '\n';
+		copy_to_user(buf + offset, idiom, IDIOM_LEN + 1);
+		offset += IDIOM_LEN + 1;
 	}
 	*f_pos = offset;
 	return offset;
