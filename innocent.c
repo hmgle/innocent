@@ -10,116 +10,116 @@
 
 #include "config.h"
 
-#define IDIMO_HASH_BITS 12
-#define IDIMO_TABLE_SIZE (1 << IDIMO_HASH_BITS)
+#define IDIOM_HASH_BITS 12
+#define IDIOM_TABLE_SIZE (1 << IDIOM_HASH_BITS)
 
-static struct hlist_head idimo_table[IDIMO_TABLE_SIZE];
+static struct hlist_head idiom_table[IDIOM_TABLE_SIZE];
 
 static char prefix[3];
 
-struct idimo_index {
+struct idiom_index {
 	struct hlist_node hlist;
-	char idimo_index_name[3];
+	char idiom_index_name[3];
 	struct list_head list;
 };
 
-struct idimo_entry {
-	char idimo[9];
+struct idiom_entry {
+	char idiom[9];
 	struct list_head list;
 };
 
-static struct idimo_index *get_idimo_index(const char *name)
+static struct idiom_index *get_idiom_index(const char *name)
 {
 	struct hlist_head *head;
 #if NEWKERN
 #else
 	struct hlist_node *node;
 #endif
-	struct idimo_index *e;
+	struct idiom_index *e;
 	u32 hash = jhash(name, 3, 0);
 
-	head = &idimo_table[hash & (IDIMO_TABLE_SIZE - 1)];
+	head = &idiom_table[hash & (IDIOM_TABLE_SIZE - 1)];
 #if NEWKERN
 	hlist_for_each_entry(e, head, hlist)
 #else
 	hlist_for_each_entry(e, node, head, hlist)
 #endif
-		if (!strncmp(name, e->idimo_index_name, 3))
+		if (!strncmp(name, e->idiom_index_name, 3))
 			return e;
 	return NULL;
 }
 
-static struct idimo_index *add_idimo_index(const char *name)
+static struct idiom_index *add_idiom_index(const char *name)
 {
 	struct hlist_head *head;
 #if NEWKERN
 #else
 	struct hlist_node *node;
 #endif
-	struct idimo_index *e;
+	struct idiom_index *e;
 	u32 hash = jhash(name, 3, 0);
 
-	head = &idimo_table[hash & (IDIMO_TABLE_SIZE - 1)];
+	head = &idiom_table[hash & (IDIOM_TABLE_SIZE - 1)];
 #if NEWKERN
 	hlist_for_each_entry(e, head, hlist)
 #else
 	hlist_for_each_entry(e, node, head, hlist)
 #endif
-		if (!strncmp(name, e->idimo_index_name, 3))
+		if (!strncmp(name, e->idiom_index_name, 3))
 			return ERR_PTR(-EEXIST); /* Already there */
-	e = kmalloc(sizeof(struct idimo_index), GFP_KERNEL);
+	e = kmalloc(sizeof(struct idiom_index), GFP_KERNEL);
 	if (!e)
 		return ERR_PTR(-ENOMEM);
-	memcpy(&e->idimo_index_name[0], name, 3);
+	memcpy(&e->idiom_index_name[0], name, 3);
 	INIT_LIST_HEAD(&e->list);
 	hlist_add_head(&e->hlist, head);
 	return e;
 }
 
-static void idimo_index_add_entry(struct idimo_index *index,
-				struct idimo_entry *entry)
+static void idiom_index_add_entry(struct idiom_index *index,
+				struct idiom_entry *entry)
 {
 	list_add(&entry->list, &index->list);
 }
 
-static void idimo_index_del_all_entry(struct idimo_index *index)
+static void idiom_index_del_all_entry(struct idiom_index *index)
 {
-	struct idimo_entry *tmp;
+	struct idiom_entry *tmp;
 	struct list_head *pos, *q;
 
 	list_for_each_safe(pos, q, &index->list) {
-		tmp = list_entry(pos, struct idimo_entry, list);
+		tmp = list_entry(pos, struct idiom_entry, list);
 		list_del(pos);
 		kfree(tmp);
 	}
 }
 
-static void idimo_del_all_index(void)
+static void idiom_del_all_index(void)
 {
 	struct hlist_head *head;
 	struct hlist_node *node, *tmp;
-	struct idimo_index *index;
+	struct idiom_index *index;
 	int i;
 
-	for (i = 0; i < IDIMO_TABLE_SIZE; i++) {
-		head = &idimo_table[i];
+	for (i = 0; i < IDIOM_TABLE_SIZE; i++) {
+		head = &idiom_table[i];
 		hlist_for_each_safe(node, tmp, head) {
-			index = hlist_entry(node, struct idimo_index, hlist);
-			idimo_index_del_all_entry(index);
+			index = hlist_entry(node, struct idiom_index, hlist);
+			idiom_index_del_all_entry(index);
 			hlist_del(node);
 			kfree(index);
 		}
 	}
 }
 
-static int idimo_add_entry(const char name[12])
+static int idiom_add_entry(const char name[12])
 {
-	struct idimo_index *index;
-	struct idimo_entry *entry;
+	struct idiom_index *index;
+	struct idiom_entry *entry;
 
-	index = get_idimo_index(name);
+	index = get_idiom_index(name);
 	if (!index) {
-		index = add_idimo_index(name);
+		index = add_idiom_index(name);
 		if (IS_ERR(index))
 			return -1;
 	}
@@ -127,12 +127,12 @@ static int idimo_add_entry(const char name[12])
 	entry = kmalloc(sizeof(*entry), GFP_KERNEL);
 	if (!entry)
 		return -1;
-	memcpy(entry->idimo, name + 3, 9);
-	idimo_index_add_entry(index, entry);
+	memcpy(entry->idiom, name + 3, 9);
+	idiom_index_add_entry(index, entry);
 	return 0;
 }
 
-static void init_idimo_data(struct file *fp)
+static void init_idiom_data(struct file *fp)
 {
 	loff_t pos;
 	loff_t file_offset = 0;
@@ -148,9 +148,9 @@ static void init_idimo_data(struct file *fp)
 			break;
 		}
 		file_offset += vfs_read_retval;
-		ret = idimo_add_entry(buf);
+		ret = idiom_add_entry(buf);
 		if (ret < 0) {
-			printk("idimo_add_entry() failed!\n");
+			printk("idiom_add_entry() failed!\n");
 			return;
 		}
 	}
@@ -180,22 +180,22 @@ static ssize_t innocent_read(struct file *filp, char __user *buf,
 			size_t count, loff_t *f_pos)
 {
 	int offset = 0;
-	struct idimo_index *index;
-	struct idimo_entry *entry;
-	char idimo[16] = {0,};
+	struct idiom_index *index;
+	struct idiom_entry *entry;
+	char idiom[16] = {0,};
 
 	if (*f_pos != 0)
 		return 0;
 	if (prefix[0] == '\0')
 		return 0;
-	index = get_idimo_index(prefix);
+	index = get_idiom_index(prefix);
 	if (!index)
 		return 0;
-	memcpy(idimo, prefix, 3);
+	memcpy(idiom, prefix, 3);
 	list_for_each_entry(entry, &index->list, list) {
-		memcpy(idimo + 3, entry->idimo, 9);
-		idimo[12] = '\n';
-		copy_to_user(buf + offset, idimo, 13);
+		memcpy(idiom + 3, entry->idiom, 9);
+		idiom[12] = '\n';
+		copy_to_user(buf + offset, idiom, 13);
 		offset += 13;
 	}
 	*f_pos = offset;
@@ -215,9 +215,9 @@ static struct miscdevice innocent_dev = {
 	&innocent_fops
 };
 
-static void release_idimo_data(void)
+static void release_idiom_data(void)
 {
-	idimo_del_all_index();
+	idiom_del_all_index();
 }
 
 static int __init
@@ -229,14 +229,14 @@ innocent_init(void)
 
 	printk("innocent init\n");
 
-	fp = filp_open("idimo.txt", O_RDONLY, 0644);
+	fp = filp_open("idiom.txt", O_RDONLY, 0644);
 	if (IS_ERR(fp)) {
 		printk("open file error\n");
 		return -1;
 	}
 	fs = get_fs();
 	set_fs(KERNEL_DS);
-	init_idimo_data(fp);
+	init_idiom_data(fp);
 	filp_close(fp, NULL);
 	set_fs(fs);
 
@@ -251,7 +251,7 @@ static void __exit
 innocent_exit(void)
 {
 	misc_deregister(&innocent_dev);
-	release_idimo_data();
+	release_idiom_data();
 	printk("innocent exit\n");
 }
 
