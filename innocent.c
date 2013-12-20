@@ -10,17 +10,19 @@
 
 #include "config.h"
 
-#define IDIOM_LEN 12
+#define IDIOM_WROD_COUNT 4
+#define WROD_LEN 3
+#define IDIOM_LEN (IDIOM_WROD_COUNT * WROD_LEN)
 #define IDIOM_HASH_BITS 12
 #define IDIOM_TABLE_SIZE (1 << IDIOM_HASH_BITS)
 
 static struct hlist_head idiom_table[IDIOM_TABLE_SIZE];
 
-static char prefix[3];
+static char prefix[WROD_LEN];
 
 struct idiom_index {
 	struct hlist_node hlist;
-	char idiom_index_name[3];
+	char idiom_index_name[WROD_LEN];
 	struct list_head list;
 };
 
@@ -37,7 +39,7 @@ static struct idiom_index *get_idiom_index(const char *name)
 	struct hlist_node *node;
 #endif
 	struct idiom_index *e;
-	u32 hash = jhash(name, 3, 0);
+	u32 hash = jhash(name, WROD_LEN, 0);
 
 	head = &idiom_table[hash & (IDIOM_TABLE_SIZE - 1)];
 #if NEWKERN
@@ -45,7 +47,7 @@ static struct idiom_index *get_idiom_index(const char *name)
 #else
 	hlist_for_each_entry(e, node, head, hlist)
 #endif
-		if (!strncmp(name, e->idiom_index_name, 3))
+		if (!strncmp(name, e->idiom_index_name, WROD_LEN))
 			return e;
 	return NULL;
 }
@@ -58,7 +60,7 @@ static struct idiom_index *add_idiom_index(const char *name)
 	struct hlist_node *node;
 #endif
 	struct idiom_index *e;
-	u32 hash = jhash(name, 3, 0);
+	u32 hash = jhash(name, WROD_LEN, 0);
 
 	head = &idiom_table[hash & (IDIOM_TABLE_SIZE - 1)];
 #if NEWKERN
@@ -66,12 +68,12 @@ static struct idiom_index *add_idiom_index(const char *name)
 #else
 	hlist_for_each_entry(e, node, head, hlist)
 #endif
-		if (!strncmp(name, e->idiom_index_name, 3))
+		if (!strncmp(name, e->idiom_index_name, WROD_LEN))
 			return ERR_PTR(-EEXIST); /* Already there */
 	e = kmalloc(sizeof(struct idiom_index), GFP_KERNEL);
 	if (!e)
 		return ERR_PTR(-ENOMEM);
-	memcpy(&e->idiom_index_name[0], name, 3);
+	memcpy(&e->idiom_index_name[0], name, WROD_LEN);
 	INIT_LIST_HEAD(&e->list);
 	hlist_add_head(&e->hlist, head);
 	return e;
@@ -113,7 +115,7 @@ static void idiom_del_all_index(void)
 	}
 }
 
-static int idiom_add_entry(const char name[12])
+static int idiom_add_entry(const char name[IDIOM_LEN])
 {
 	struct idiom_index *index;
 	struct idiom_entry *entry;
@@ -173,7 +175,7 @@ static ssize_t innocent_write(struct file *filp, const char __user *buf,
 		copy_from_user(tmp, buf, count);
 	else
 		copy_from_user(tmp, buf, 1020);
-	memcpy(prefix, tmp, 3);
+	memcpy(prefix, tmp, WROD_LEN);
 	return count;
 }
 
