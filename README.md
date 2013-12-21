@@ -24,4 +24,7 @@ innocent
 	君命无二
 	君臣佐使
 
-对于较高版本的 Linux 内核， `hlist_for_each_entry()`接口已改动，需修改才能编译成功。
+列出所有第二个字为 "中" 的成语：
+
+	./innocent_demo.sh "2中"
+

@@ -10,134 +10,156 @@
 
 #include "config.h"
 
-#define IDIMO_HASH_BITS 12
-#define IDIMO_TABLE_SIZE (1 << IDIMO_HASH_BITS)
+#define IDIOM_WORD_COUNT 4
+#define WORD_LEN 3
+#define IDIOM_LEN (IDIOM_WORD_COUNT * WORD_LEN)
+#define IDIOM_HASH_BITS 12
+#define IDIOM_TABLE_SIZE (1 << IDIOM_HASH_BITS)
 
-static struct hlist_head idimo_table[IDIMO_TABLE_SIZE];
+static struct hlist_head idiom_table[IDIOM_WORD_COUNT][IDIOM_TABLE_SIZE];
 
-static char prefix[3];
+static char prefix[WORD_LEN];
+static int position = 0;
 
-struct idimo_index {
+struct idiom_index {
 	struct hlist_node hlist;
-	char idimo_index_name[3];
+	char idiom_index_name[WORD_LEN];
 	struct list_head list;
 };
 
-struct idimo_entry {
-	char idimo[9];
-	struct list_head list;
+struct idiom_entry {
+	char idiom[IDIOM_LEN];
+	struct list_head lists[IDIOM_WORD_COUNT];
+	int refer_cnt;
 };
 
-static struct idimo_index *get_idimo_index(const char *name)
+static struct idiom_index *get_idiom_index(const char *word, int loc)
 {
 	struct hlist_head *head;
 #if NEWKERN
 #else
 	struct hlist_node *node;
 #endif
-	struct idimo_index *e;
-	u32 hash = jhash(name, 3, 0);
+	struct idiom_index *e;
+	u32 hash;
 
-	head = &idimo_table[hash & (IDIMO_TABLE_SIZE - 1)];
+	if (loc < 0 || loc >= IDIOM_WORD_COUNT)
+		return NULL;
+	hash = jhash(word, WORD_LEN, 0);
+	head = &idiom_table[loc][hash & (IDIOM_TABLE_SIZE - 1)];
 #if NEWKERN
 	hlist_for_each_entry(e, head, hlist)
 #else
 	hlist_for_each_entry(e, node, head, hlist)
 #endif
-		if (!strncmp(name, e->idimo_index_name, 3))
+		if (!strncmp(word, e->idiom_index_name, WORD_LEN))
 			return e;
 	return NULL;
 }
 
-static struct idimo_index *add_idimo_index(const char *name)
+static struct idiom_index *add_idiom_index(const char *word, int loc)
 {
 	struct hlist_head *head;
 #if NEWKERN
 #else
 	struct hlist_node *node;
 #endif
-	struct idimo_index *e;
-	u32 hash = jhash(name, 3, 0);
+	struct idiom_index *e;
+	u32 hash;
 
-	head = &idimo_table[hash & (IDIMO_TABLE_SIZE - 1)];
+	if (loc < 0 || loc >= IDIOM_WORD_COUNT)
+		return ERR_PTR(-1);
+	hash = jhash(word, WORD_LEN, 0);
+	head = &idiom_table[loc][hash & (IDIOM_TABLE_SIZE - 1)];
 #if NEWKERN
 	hlist_for_each_entry(e, head, hlist)
 #else
 	hlist_for_each_entry(e, node, head, hlist)
 #endif
-		if (!strncmp(name, e->idimo_index_name, 3))
+		if (!strncmp(word, e->idiom_index_name, WORD_LEN))
 			return ERR_PTR(-EEXIST); /* Already there */
-	e = kmalloc(sizeof(struct idimo_index), GFP_KERNEL);
+	e = kmalloc(sizeof(struct idiom_index), GFP_KERNEL);
 	if (!e)
 		return ERR_PTR(-ENOMEM);
-	memcpy(&e->idimo_index_name[0], name, 3);
+	memcpy(&e->idiom_index_name[0], word, WORD_LEN);
 	INIT_LIST_HEAD(&e->list);
 	hlist_add_head(&e->hlist, head);
 	return e;
 }
 
-static void idimo_index_add_entry(struct idimo_index *index,
-				struct idimo_entry *entry)
+static void idiom_index_add_entry(struct idiom_index *index,
+				  struct idiom_entry *entry, int loc)
 {
-	list_add(&entry->list, &index->list);
+	list_add(&entry->lists[loc], &index->list);
+	entry->refer_cnt++;
 }
 
-static void idimo_index_del_all_entry(struct idimo_index *index)
+static void idiom_index_del_all_entry(struct idiom_index *index, int loc)
 {
-	struct idimo_entry *tmp;
+	struct idiom_entry *tmp;
 	struct list_head *pos, *q;
 
 	list_for_each_safe(pos, q, &index->list) {
-		tmp = list_entry(pos, struct idimo_entry, list);
+		tmp = list_entry(pos, struct idiom_entry, lists[loc]);
 		list_del(pos);
-		kfree(tmp);
+		tmp->refer_cnt--;
+		if (tmp->refer_cnt == 0)
+			kfree(tmp);
 	}
 }
 
-static void idimo_del_all_index(void)
+static void idiom_del_all_index(void)
 {
 	struct hlist_head *head;
 	struct hlist_node *node, *tmp;
-	struct idimo_index *index;
+	struct idiom_index *index;
 	int i;
+	int j;
 
-	for (i = 0; i < IDIMO_TABLE_SIZE; i++) {
-		head = &idimo_table[i];
-		hlist_for_each_safe(node, tmp, head) {
-			index = hlist_entry(node, struct idimo_index, hlist);
-			idimo_index_del_all_entry(index);
-			hlist_del(node);
-			kfree(index);
+	for (j = 0; j < IDIOM_WORD_COUNT; j++)
+		for (i = 0; i < IDIOM_TABLE_SIZE; i++) {
+			head = &idiom_table[j][i];
+			hlist_for_each_safe(node, tmp, head) {
+				index =
+				    hlist_entry(node, struct idiom_index,
+						hlist);
+				idiom_index_del_all_entry(index, j);
+				hlist_del(node);
+				kfree(index);
+			}
 		}
-	}
 }
 
-static int idimo_add_entry(const char name[12])
+static int idiom_add_entry(const char name[IDIOM_LEN])
 {
-	struct idimo_index *index;
-	struct idimo_entry *entry;
+	struct idiom_index *index;
+	struct idiom_entry *entry;
+	int loc;
 
-	index = get_idimo_index(name);
-	if (!index) {
-		index = add_idimo_index(name);
-		if (IS_ERR(index))
-			return -1;
-	}
 	/* TODO: check  duplicate */
 	entry = kmalloc(sizeof(*entry), GFP_KERNEL);
 	if (!entry)
 		return -1;
-	memcpy(entry->idimo, name + 3, 9);
-	idimo_index_add_entry(index, entry);
+	entry->refer_cnt = 0;
+	memcpy(entry->idiom, name, IDIOM_LEN);
+	for (loc = 0; loc < IDIOM_WORD_COUNT; loc++) {
+		index = get_idiom_index(name + loc * WORD_LEN, loc);
+		if (!index) {
+			index = add_idiom_index(name + loc * WORD_LEN, loc);
+			if (IS_ERR(index))
+				return -1;
+		}
+		idiom_index_add_entry(index, entry, loc);
+	}
 	return 0;
 }
 
-static void init_idimo_data(struct file *fp)
+static void init_idiom_data(struct file *fp)
 {
 	loff_t pos;
 	loff_t file_offset = 0;
 	ssize_t vfs_read_retval;
-	char buf[16] = {0,};
+	char buf[16] = { 0, };
 	int ret;
 
 	for (;;) {
@@ -148,65 +170,82 @@ static void init_idimo_data(struct file *fp)
 			break;
 		}
 		file_offset += vfs_read_retval;
-		ret = idimo_add_entry(buf);
+		ret = idiom_add_entry(buf);
 		if (ret < 0) {
-			printk("idimo_add_entry() failed!\n");
+			printk("idiom_add_entry() failed!\n");
 			return;
 		}
 	}
 }
 
 static long innocent_ioctl(struct file *filp, unsigned int cmd,
-			  unsigned long arg)
+			   unsigned long arg)
 {
 	return 0;
 }
 
+static void pre_parse(const char *data, char *prefix, int *position,
+		      size_t count)
+{
+	const char *c;
+	size_t l;
+	size_t remain;
+
+	c = skip_spaces(data);
+	if (*c == '1' || *c == '2' || *c == '3' || *c == '4') {
+		*position = *c++ - '1';
+		c = skip_spaces(c);
+	}
+	l = c - data;
+	remain = count - l;
+	if (remain > WORD_LEN)
+		memcpy(prefix, c, WORD_LEN);
+}
+
 static ssize_t innocent_write(struct file *filp, const char __user *buf,
-			size_t count, loff_t *f_pos)
+			      size_t count, loff_t *f_pos)
 {
 	char tmp[1020];
 
-	printk("count is %d\n", count);
 	if (count < 1020)
 		copy_from_user(tmp, buf, count);
 	else
 		copy_from_user(tmp, buf, 1020);
-	memcpy(prefix, tmp, 3);
+
+	pre_parse(tmp, prefix, &position, count);
 	return count;
 }
 
 static ssize_t innocent_read(struct file *filp, char __user *buf,
-			size_t count, loff_t *f_pos)
+			     size_t count, loff_t *f_pos)
 {
 	int offset = 0;
-	struct idimo_index *index;
-	struct idimo_entry *entry;
-	char idimo[16] = {0,};
+	struct idiom_index *index;
+	struct idiom_entry *entry;
+	char idiom[IDIOM_LEN + 1] = { 0, };
 
 	if (*f_pos != 0)
 		return 0;
 	if (prefix[0] == '\0')
 		return 0;
-	index = get_idimo_index(prefix);
+	index = get_idiom_index(prefix, position);
 	if (!index)
 		return 0;
-	memcpy(idimo, prefix, 3);
-	list_for_each_entry(entry, &index->list, list) {
-		memcpy(idimo + 3, entry->idimo, 9);
-		idimo[12] = '\n';
-		copy_to_user(buf + offset, idimo, 13);
-		offset += 13;
+	list_for_each_entry(entry, &index->list, lists[position]) {
+		memcpy(idiom, entry->idiom, IDIOM_LEN);
+		idiom[IDIOM_LEN] = '\n';
+		copy_to_user(buf + offset, idiom, IDIOM_LEN + 1);
+		offset += IDIOM_LEN + 1;
 	}
 	*f_pos = offset;
 	return offset;
 }
 
 static const struct file_operations innocent_fops = {
-	.owner		= THIS_MODULE,
-	.read		= innocent_read,
-	.write		= innocent_write,
-	.unlocked_ioctl	= innocent_ioctl,
+	.owner = THIS_MODULE,
+	.read = innocent_read,
+	.write = innocent_write,
+	.unlocked_ioctl = innocent_ioctl,
 };
 
 static struct miscdevice innocent_dev = {
@@ -215,13 +254,12 @@ static struct miscdevice innocent_dev = {
 	&innocent_fops
 };
 
-static void release_idimo_data(void)
+static void release_idiom_data(void)
 {
-	idimo_del_all_index();
+	idiom_del_all_index();
 }
 
-static int __init
-innocent_init(void)
+static int __init innocent_init(void)
 {
 	struct file *fp;
 	mm_segment_t fs;
@@ -229,29 +267,28 @@ innocent_init(void)
 
 	printk("innocent init\n");
 
-	fp = filp_open("idimo.txt", O_RDONLY, 0644);
+	fp = filp_open("idiom.txt", O_RDONLY, 0644);
 	if (IS_ERR(fp)) {
 		printk("open file error\n");
 		return -1;
 	}
 	fs = get_fs();
 	set_fs(KERNEL_DS);
-	init_idimo_data(fp);
+	init_idiom_data(fp);
 	filp_close(fp, NULL);
 	set_fs(fs);
 
 	ret = misc_register(&innocent_dev);
 	if (ret)
 		printk(KERN_ERR
-			"Unable to register \"innocent\" misc device\n");
+		       "Unable to register \"innocent\" misc device\n");
 	return ret;
 }
 
-static void __exit
-innocent_exit(void)
+static void __exit innocent_exit(void)
 {
 	misc_deregister(&innocent_dev);
-	release_idimo_data();
+	release_idiom_data();
 	printk("innocent exit\n");
 }
 
