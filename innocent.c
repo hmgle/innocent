@@ -19,7 +19,7 @@
 static struct hlist_head idiom_table[IDIOM_WORD_COUNT][IDIOM_TABLE_SIZE];
 
 static char prefix[WORD_LEN];
-static int position = 1;
+static int position = 0;
 
 struct idiom_index {
 	struct hlist_node hlist;
@@ -184,17 +184,35 @@ static long innocent_ioctl(struct file *filp, unsigned int cmd,
 	return 0;
 }
 
+static void pre_parse(const char *data, char *prefix, int *position,
+		      size_t count)
+{
+	const char *c;
+	size_t l;
+	size_t remain;
+
+	c = skip_spaces(data);
+	if (*c == '1' || *c == '2' || *c == '3' || *c == '4') {
+		*position = *c++ - '1';
+		c = skip_spaces(c);
+	}
+	l = c - data;
+	remain = count - l;
+	if (remain > WORD_LEN)
+		memcpy(prefix, c, WORD_LEN);
+}
+
 static ssize_t innocent_write(struct file *filp, const char __user *buf,
 			      size_t count, loff_t *f_pos)
 {
 	char tmp[1020];
 
-	printk("count is %d\n", count);
 	if (count < 1020)
 		copy_from_user(tmp, buf, count);
 	else
 		copy_from_user(tmp, buf, 1020);
-	memcpy(prefix, tmp, WORD_LEN);
+
+	pre_parse(tmp, prefix, &position, count);
 	return count;
 }
 
