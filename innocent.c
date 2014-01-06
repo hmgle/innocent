@@ -235,12 +235,21 @@ static ssize_t innocent_read(struct file *filp, char __user *buf,
 	list_for_each_entry(entry, &index->list, lists[position]) {
 		memcpy(idiom, entry->idiom, IDIOM_LEN);
 		idiom[IDIOM_LEN] = '\n';
-		ret = copy_to_user(buf + offset, idiom, IDIOM_LEN + 1);
-		if (ret) {
-			offset += IDIOM_LEN + 1 - ret;
-			break;
+		if (offset + IDIOM_LEN + 1 <= count) {
+			ret = copy_to_user(buf + offset, idiom, IDIOM_LEN + 1);
+			if (ret) {
+				offset += IDIOM_LEN + 1 - ret;
+				break;
+			}
+			offset += IDIOM_LEN + 1;
+		} else {
+			ret = copy_to_user(buf + offset, idiom, count - offset);
+			if (ret) {
+				offset += count - offset - ret;
+				break;
+			}
+			offset += count - offset;
 		}
-		offset += IDIOM_LEN + 1;
 	}
 	*f_pos = offset;
 	return offset;
