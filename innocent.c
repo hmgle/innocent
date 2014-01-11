@@ -223,6 +223,7 @@ static ssize_t innocent_read(struct file *filp, char __user *buf,
 	struct idiom_index *index;
 	struct idiom_entry *entry;
 	char idiom[IDIOM_LEN + 1] = { 0, };
+	unsigned long ret;
 
 	if (*f_pos != 0)
 		return 0;
@@ -234,8 +235,21 @@ static ssize_t innocent_read(struct file *filp, char __user *buf,
 	list_for_each_entry(entry, &index->list, lists[position]) {
 		memcpy(idiom, entry->idiom, IDIOM_LEN);
 		idiom[IDIOM_LEN] = '\n';
-		copy_to_user(buf + offset, idiom, IDIOM_LEN + 1);
-		offset += IDIOM_LEN + 1;
+		if (offset + IDIOM_LEN + 1 <= count) {
+			ret = copy_to_user(buf + offset, idiom, IDIOM_LEN + 1);
+			if (ret) {
+				offset += IDIOM_LEN + 1 - ret;
+				break;
+			}
+			offset += IDIOM_LEN + 1;
+		} else {
+			ret = copy_to_user(buf + offset, idiom, count - offset);
+			if (ret) {
+				offset += count - offset - ret;
+				break;
+			}
+			offset += count - offset;
+		}
 	}
 	*f_pos = offset;
 	return offset;
