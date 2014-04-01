@@ -1,10 +1,20 @@
-innocent
-========
+# innocent
 
-成语驱动。
+## 简介
+
+查询成语的`Linux`内核模块。可用于开发**成语接龙**、**接二连三** 等程序。
+`python` 使用示例见目录内 `innocent_demo.py`。
+
+## 安装
+
+	make
+	sudo make install
+
+## 使用
+
 使用示例:
 
-	$ insmod ./innocent.ko
+	$ sudo insmod ./innocent.ko # 或 sudo modprobe innocent
 	$ echo "君" > /dev/innocent
 	$ cat /dev/innocent
 	君子之过
