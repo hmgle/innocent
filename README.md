@@ -7,34 +7,65 @@
 
 ## 安装
 
-	make
-	sudo make install
+```bash
+make
+sudo make install
+```
 
 ## 使用
 
 使用示例:
 
-	$ sudo insmod ./innocent.ko # 或 sudo modprobe innocent
-	$ echo "君" > /dev/innocent
-	$ cat /dev/innocent
-	君子之过
-	君子不器
-	君射臣决
-	君仁臣直
-	君唱臣和
-	君侧之恶
-	君暗臣蔽
-	君子之交
-	君子协定
-	君子三戒
-	君子好逑
-	君子固穷
-	君圣臣贤
-	君辱臣死
-	君命无二
-	君臣佐使
+```console
+$ sudo insmod ./innocent.ko # make install 后可以 sudo modprobe innocent
+$ echo "君" > /dev/innocent
+$ cat /dev/innocent
+君子之过
+君子不器
+君射臣决
+君仁臣直
+君唱臣和
+君侧之恶
+君暗臣蔽
+君子之交
+君子协定
+君子三戒
+君子好逑
+君子固穷
+君圣臣贤
+君辱臣死
+君命无二
+君臣佐使
+```
 
-列出所有第二个字为 "中" 的成语：
+列出所有第二个字为 "钟" 的成语：
 
-	./innocent_demo.sh "2中"
+```console
+./innocent_demo.sh "2钟"
+撞钟舞女
+撞钟击鼓
+撞钟伐鼓
+撞钟吹螺
+万钟之藏
+情钟我辈
+窃钟掩耳
+龙钟潦倒
+龙钟老态
+黄钟瓦缶
+洪钟大吕
+晨钟暮鼓
+朝钟暮鼓
+盗钟掩耳
+黄钟瓦釜
+黄钟毁弃
+黄钟大吕
+黄钟长弃
+毁钟为铎
+击钟鼎食
+击钟陈鼎
+鸣钟食鼎
+鸣钟列鼎
+现钟弗打
+现钟不打
+```
 
