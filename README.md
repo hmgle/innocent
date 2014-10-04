@@ -41,7 +41,7 @@ $ cat /dev/innocent
 列出所有第二个字为 "钟" 的成语：
 
 ```console
-./innocent_demo.sh "2钟"
+$ ./innocent_demo.sh "2钟"
 撞钟舞女
 撞钟击鼓
 撞钟伐鼓
