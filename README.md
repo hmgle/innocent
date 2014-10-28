@@ -12,6 +12,13 @@ make
 sudo make install
 ```
 
+若提示 `/lib/modules/xxx/build: 没有那个文件或目录. 停止.` 错误, 请先安装内核头文件目录树:
+
+```bash
+# for Debian/Ubuntu:
+sudo apt-get install linux-headers-$(uname -r)
+```
+
 ## 使用
 
 使用示例:
