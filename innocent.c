@@ -205,9 +205,9 @@ static void pre_parse(const char *data, char *prefix, int *position,
 static ssize_t innocent_write(struct file *filp, const char __user *buf,
 			      size_t count, loff_t *f_pos)
 {
-	char tmp[1020];
+	char tmp[1016];
 
-	ssize_t wsize = count < 1020 ? count:1020;
+	ssize_t wsize = count < 1016 ? count:1016;
 	copy_from_user(tmp, buf, wsize);
 
 	pre_parse(tmp, prefix, &position, wsize);
