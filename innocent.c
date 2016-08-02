@@ -207,13 +207,11 @@ static ssize_t innocent_write(struct file *filp, const char __user *buf,
 {
 	char tmp[1020];
 
-	if (count < 1020)
-		copy_from_user(tmp, buf, count);
-	else
-		copy_from_user(tmp, buf, 1020);
+	ssize_t wsize = count < 1020 ? count:1020;
+	copy_from_user(tmp, buf, wsize);
 
-	pre_parse(tmp, prefix, &position, count);
-	return count;
+	pre_parse(tmp, prefix, &position, wsize);
+	return wsize;
 }
 
 static ssize_t innocent_read(struct file *filp, char __user *buf,
